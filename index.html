@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>dota2 combat</title>
+</head>
+<body>
+    <header>
+        <h1>Dota2 Combat</h1>
+    </header>
+    <nav>
+        <button onclick="showTab('clicker')">Фарм</button>
+        <button onclick="showTab('store')">Лавка</button>
+    </nav>
+
+    <div id="clicker" class="tab">
+        <h2>Фарми</h2>
+        <p>Золото: <span id="clickCount">0</span></p>
+        <p>Уровень: <span id="level">1</span></p>
+        <progress id="progressBar" value="0" max="100"></progress>
+        <div class="clicker">
+            <img id="clickItem" src="item1.png" alt="Click Item" onclick="incrementClicks()">
+        </div>
+    </div>
+
+    <div id="store" class="tab hidden">
+        <h2>Лавка</h2>
+        <p>Золото: <span id="coins">0</span></p>
+        <div class="store">
+            <div class="store-item">
+                <img src="DD.png" alt="Item 2">
+                <p>Двойной дамаг - 100 Золота (x2)</p>
+                <button data-multiplier="2" data-cost="100">Купить</button>
+            </div>
+            <div class="store-item">
+                <img src="ilusia.png" alt="Item 3">
+                <p>Автокликер - 250 Золота (1 клик в секунду)</p>
+                <button data-autoclicker="true" data-cost="250">Купить</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let clicks = 0;
+        let coins = 0;
+        const progressMax = 100;
+        let level = 1;
+        let tapMultiplier = 1;
+        let autoclickerActive = false;
+
+        window.addEventListener('load', () => {
+            clicks = parseInt(localStorage.getItem('clicks')) || 0;
+            coins = parseInt(localStorage.getItem('coins')) || 0;
+            level = parseInt(localStorage.getItem('level')) || 1;
+            tapMultiplier = parseInt(localStorage.getItem('tapMultiplier')) || 1;
+            autoclickerActive = JSON.parse(localStorage.getItem('autoclickerActive')) || false;
+
+            document.getElementById('clickCount').textContent = clicks;
+            document.getElementById('coins').textContent = coins;
+            document.getElementById('level').textContent = level;
+
+            updateProgress();
+            updateCharacter();
+
+            if (autoclickerActive) {
+                startAutoclicker();
+            }
+        });
+
+        window.addEventListener('beforeunload', () => {
+            localStorage.setItem('clicks', clicks);
+            localStorage.setItem('coins', coins);
+            localStorage.setItem('level', level);
+            localStorage.setItem('tapMultiplier', tapMultiplier);
+            localStorage.setItem('autoclickerActive', JSON.stringify(autoclickerActive));
+        });
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+        }
+
+        function incrementClicks() {
+            const addedClicks = tapMultiplier;
+            clicks += addedClicks;
+            coins += addedClicks;
+            document.getElementById('clickCount').textContent = clicks;
+            document.getElementById('coins').textContent = coins;
+
+            showFloatingNumber(addedClicks);
+            updateProgress();
+
+            if (clicks >= level * 100) {
+                level++;
+                document.getElementById('level').textContent = level;
+                updateCharacter();
+            }
+
+            const clickItem = document.getElementById('clickItem');
+            clickItem.classList.add('clicked');
+
+            setTimeout(() => {
+                clickItem.classList.remove('clicked');
+            }, 200);
+        }
+
+        function showFloatingNumber(addedClicks) {
+            const floatingNumber = document.createElement('div');
+            floatingNumber.classList.add('floating-number');
+
+            const floatingContent = document.createElement('span');
+            floatingContent.textContent = `+${addedClicks}`;
+
+            const floatingImage = document.createElement('img');
+            floatingImage.src = 'goldcoin.png';
+            floatingImage.style.width = '20px';
+            floatingImage.style.height = '20px';
+            floatingImage.style.marginLeft = '5px';
+
+            floatingNumber.appendChild(floatingContent);
+            floatingNumber.appendChild(floatingImage);
+
+            document.body.appendChild(floatingNumber);
+
+            const clickItem = document.getElementById('clickItem');
+            const rect = clickItem.getBoundingClientRect();
+
+            const randomOffsetX = Math.random() * 100 - 50;
+            const randomOffsetY = Math.random() * 100 - 50;
+
+            floatingNumber.style.left = `${rect.left + rect.width / 2 + randomOffsetX}px`;
+            floatingNumber.style.top = `${rect.top + rect.height / 2 + randomOffsetY}px`;
+
+            setTimeout(() => {
+                floatingNumber.remove();
+            }, 1000);
+        }
+
+        function updateProgress() {
+            const progressBar = document.getElementById('progressBar');
+            const progress = (clicks % 100);
+            progressBar.value = progress;
+        }
+
+        function updateCharacter() {
+            let newSkin;
+            if (level >= 1 && level <= 10) {
+                newSkin = `item${level}.webp`;
+            } else {
+                newSkin = 'item10.webp';
+            }
+
+            document.getElementById('clickItem').src = newSkin;
+
+            if (level === 10) {
+                alert('Максимальный уровень!');
+            }
+        }
+
+        function spawnBonusImage() {
+            const bonusImage = document.createElement('img');
+            bonusImage.src = 'runazolota.png';
+            bonusImage.style.position = 'absolute';
+            bonusImage.style.width = '50px';
+            bonusImage.style.height = '50px';
+
+            const randomX = Math.random() * (window.innerWidth - 50);
+            const randomY = Math.random() * (window.innerHeight - 50);
+            bonusImage.style.left = `${randomX}px`;
+            bonusImage.style.top = `${randomY}px`;
+
+            let directionX = Math.random() > 0.5 ? 1 : -1;
+            let directionY = Math.random() > 0.5 ? 1 : -1;
+            const speed = 1;
+
+            const moveInterval = setInterval(() => {
+                let currentX = parseFloat(bonusImage.style.left);
+                let currentY = parseFloat(bonusImage.style.top);
+
+                if (currentX <= 0 || currentX >= window.innerWidth - 50) directionX *= -1;
+                if (currentY <= 0 || currentY >= window.innerHeight - 50) directionY *= -1;
+
+                bonusImage.style.left = `${currentX + directionX * speed}px`;
+                bonusImage.style.top = `${currentY + directionY * speed}px`;
+            }, 20);
+
+            bonusImage.addEventListener('click', () => {
+                const bonusGold = 25;
+                coins += bonusGold;
+                document.getElementById('coins').textContent = coins;
+                alert(`Получено бонусное золото: ${bonusGold}`);
+                clearInterval(moveInterval);
+                bonusImage.remove();
+            });
+
+            document.body.appendChild(bonusImage);
+
+            setTimeout(() => {
+                clearInterval(moveInterval);
+                bonusImage.remove();
+            }, 10000);
+        }
+
+        setInterval(() => {
+            spawnBonusImage();
+        }, Math.random() * 3000 + 13000);
+
+        function buyUpgrade(multiplier, cost, isAutoclicker) {
+            if (coins >= cost) {
+                coins -= cost;
+                document.getElementById('coins').textContent = coins;
+
+                if (isAutoclicker) {
+                    autoclickerActive = true;
+                    startAutoclicker();
+                    alert('Autoclicker purchased!');
+                } else {
+                    tapMultiplier = multiplier;
+                    alert('Upgrade purchased!');
+                }
+            } else {
+                alert('Not enough coins!');
+            }
+        }
+
+        function startAutoclicker() {
+            setInterval(() => {
+                if (autoclickerActive) {
+                    incrementClicks();
+                }
+            }, 1000);
+        }
+
+        document.querySelectorAll('.store-item button').forEach(button => {
+            button.addEventListener('click', function () {
+                const multiplier = parseInt(this.getAttribute('data-multiplier'));
+                const cost = parseInt(this.getAttribute('data-cost'));
+                const isAutoclicker = this.hasAttribute('data-autoclicker');
+                buyUpgrade(multiplier, cost, isAutoclicker);
+            });
+        });
+
+    </script>
+</body>
+</html>
